@@ -1,18 +1,20 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
 
 export default function ImageUploader({ imagenActualUrl, onImageChange, onImageRemove }) {
-  // Inicializa directamente con el valor de la prop, en lugar de usar useEffect
   const [preview, setPreview] = useState(imagenActualUrl || null);
   const [teniaGuardada, setTeniaGuardada] = useState(!!imagenActualUrl);
   const inputRef = useRef(null);
 
+  useEffect(() => {
+    setPreview(imagenActualUrl || null);
+    setTeniaGuardada(!!imagenActualUrl);
+  }, [imagenActualUrl]);
 
   const handleChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validación cliente — el backend también valida pero esto da feedback inmediato
     if (!file.type.startsWith('image/')) {
       alert('El archivo seleccionado no es una imagen');
       return;
@@ -22,7 +24,6 @@ export default function ImageUploader({ imagenActualUrl, onImageChange, onImageR
       return;
     }
 
-    // URL.createObjectURL crea una preview local sin necesidad de subir nada todavía
     setPreview(URL.createObjectURL(file));
     onImageChange(file);
   };
@@ -30,7 +31,6 @@ export default function ImageUploader({ imagenActualUrl, onImageChange, onImageR
   const handleRemove = () => {
     setPreview(null);
     onImageChange(null);
-    // Si había una imagen guardada en el servidor, avisamos al padre para que la borre
     if (teniaGuardada && onImageRemove) {
       onImageRemove();
       setTeniaGuardada(false);
@@ -120,4 +120,3 @@ export default function ImageUploader({ imagenActualUrl, onImageChange, onImageR
     </div>
   );
 }
- 

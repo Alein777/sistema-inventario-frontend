@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 import { Plus, Search, Eye, Pencil, ArrowLeftRight, PowerOff, Package } from 'lucide-react';
-import ImageUploader from '../components/ImageUploader';
 
 const estadoColor = { ok: '#059669', low: '#d97706', critical: '#dc2626' };
 const estadoLabel = { ok: 'En stock', low: 'Stock bajo', critical: 'Sin stock' };
@@ -41,9 +40,6 @@ function ProductoForm({ inicial, categorias, proveedores, onSave, onClose }) {
     id_proveedor:  inicial?.id_proveedor || '',
     estado:        inicial?.estado ?? 1,
   });
-
-  const [imagenFile, setImagenFile] = useState(null);
-  const [eliminarImagen, setEliminarImagen] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -52,7 +48,6 @@ function ProductoForm({ inicial, categorias, proveedores, onSave, onClose }) {
     e.preventDefault();
     setLoading(true);
     try {
-
       const payload = { ...form };
       // Al editar no enviamos stock — solo se cambia via ajuste
       if (esEdicion) delete payload.stock;
@@ -66,15 +61,11 @@ function ProductoForm({ inicial, categorias, proveedores, onSave, onClose }) {
         toast.success('Producto actualizado');
       } else {
         await api.post('/productos', payload);
-
         toast.success('Producto creado');
       }
       onSave();
-    } catch (err) {
-      const msg = err.response?.data?.message
-        || Object.values(err.response?.data?.errors || {})[0]?.[0]
-        || 'Error al guardar';
-      toast.error(msg);
+    } catch {
+      toast.error('Error al guardar');
     } finally {
       setLoading(false);
     }
@@ -91,19 +82,6 @@ function ProductoForm({ inicial, categorias, proveedores, onSave, onClose }) {
   return (
     <form onSubmit={handleSubmit}>
       <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-        {}
-        <ImageUploader
-          imagenActualUrl={inicial?.imagen_url}
-          onImageChange={(file) => {
-            setImagenFile(file);
-            if (file) setEliminarImagen(false);
-          }}
-          onImageRemove={() => {
-            setImagenFile(null);
-            setEliminarImagen(true);
-          }}
-        />
-
         {input('Nombre', 'nombre', 'text', 'Ej. Laptop HP 15s')}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
           <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Detalle</label>
@@ -137,11 +115,6 @@ function ProductoForm({ inicial, categorias, proveedores, onSave, onClose }) {
             </select>
           </div>
         </div>
-        {esEdicion && (
-          <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#92400e' }}>
-            💡 Para modificar el stock usa el botón <strong>Ajustar stock</strong> en la tarjeta del producto.
-          </div>
-        )}
       </div>
       <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, justifyContent: 'flex-end', position: 'sticky', bottom: 0, background: '#fff' }}>
         <button type="button" onClick={onClose} style={{ padding: '8px 16px', border: '1px solid var(--border)', background: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: 'var(--muted)' }}>Cancelar</button>
@@ -181,21 +154,23 @@ function AjusteModal({ producto, onSave, onClose }) {
       <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div style={{ background: '#f8fafc', borderRadius: 8, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontSize: 13, fontWeight: 600 }}>{producto.nombre}</span>
-          <span style={{ fontSize: 12, color: 'var(--muted)' }}>Stock actual: <strong>{producto.stock}</strong></span>
+          <span style={{ fontSize: 12, color: 'var(--muted)' }}>Stock actual: <strong style={{ color: 'var(--text)' }}>{producto.stock}</strong></span>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {['entrada', 'salida'].map(t => (
-            <button type="button" key={t} onClick={() => setForm(f => ({ ...f, tipo: t }))}
-              style={{
-                flex: 1, padding: '10px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                border: form.tipo === t ? `2px solid ${t === 'entrada' ? 'var(--success)' : 'var(--danger)'}` : '1px solid var(--border)',
-                background: form.tipo === t ? (t === 'entrada' ? '#ecfdf5' : '#fef2f2') : '#fff',
-                color: form.tipo === t ? (t === 'entrada' ? 'var(--success)' : 'var(--danger)') : 'var(--muted)',
-                textTransform: 'capitalize'
-              }}>
-              {t}
-            </button>
-          ))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+          <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Tipo</label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            {['entrada', 'salida'].map(t => (
+              <button key={t} type="button" onClick={() => setForm(f => ({ ...f, tipo: t }))}
+                style={{
+                  padding: 10, borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                  border: `1.5px solid ${form.tipo === t ? (t === 'entrada' ? 'var(--success)' : 'var(--danger)') : 'var(--border)'}`,
+                  background: form.tipo === t ? (t === 'entrada' ? '#f0fdf4' : '#fef2f2') : 'none',
+                  color: form.tipo === t ? (t === 'entrada' ? 'var(--success)' : 'var(--danger)') : 'var(--muted)'
+                }}>
+                {t === 'entrada' ? '↑ Entrada' : '↓ Salida'}
+              </button>
+            ))}
+          </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
           <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Cantidad</label>
@@ -206,11 +181,16 @@ function AjusteModal({ producto, onSave, onClose }) {
           <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Motivo</label>
           <select value={form.motivo} onChange={e => setForm(f => ({ ...f, motivo: e.target.value }))}
             style={{ padding: '9px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, outline: 'none' }}>
-            {motivos.map(m => <option key={m} value={m}>{m}</option>)}
+            {motivos.map(m => <option key={m}>{m}</option>)}
           </select>
         </div>
-        <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, padding: 10, fontSize: 12, color: '#0369a1' }}>
-          Stock resultante: <strong>{stockNuevo} unidades</strong>
+        <div style={{ background: '#f8fafc', borderRadius: 8, padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase' }}>Resultado</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 700 }}>
+            <span style={{ color: 'var(--muted)' }}>{producto.stock}</span>
+            <span style={{ color: 'var(--muted)', fontSize: 12 }}>→</span>
+            <span style={{ color: form.tipo === 'entrada' ? 'var(--success)' : 'var(--danger)' }}>{stockNuevo}</span>
+          </div>
         </div>
       </div>
       <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
@@ -244,7 +224,6 @@ export default function Productos() {
     setProveedores(pr.data.data || []);
   };
 
-  // eslint-disable-next-line
   useEffect(() => { fetchAll(); }, []);
 
   const filtered = productos.filter(p => {
@@ -304,13 +283,11 @@ export default function Productos() {
           const pct = Math.min(100, Math.round((p.stock / Math.max(p.stock_minimo * 2, 1)) * 100));
           return (
             <div key={p.id} style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', opacity: p.estado === 0 ? 0.6 : 1, transition: 'all 0.2s' }}>
-+
               <div style={{ height: 110, background: 'linear-gradient(135deg, #f0f5ff, #e8f0fe)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
                 {p.imagen
                   ? <img src={p.imagen} alt={p.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : <Package size={32} color="#93afd4" />
                 }
-
                 <span style={{ position: 'absolute', top: 8, right: 8, fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: color + '20', color }}>
                   {est === 'inactive' ? 'Inactivo' : estadoLabel[est]}
                 </span>
@@ -367,10 +344,8 @@ export default function Productos() {
       {modal === 'ver' && selected && (
         <Modal title="Detalle del producto" onClose={() => setModal(null)}>
           <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-
             {p?.imagen && (
               <img src={selected.imagen} alt={selected.nombre} style={{ width: '100%', height: 180, objectFit: 'cover', borderRadius: 8 }} />
-
             )}
             {[
               ['Nombre',        selected.nombre],

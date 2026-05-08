@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost/sistema-inventario/public/api',
+  baseURL: 'http://localhost/gda-store/public/api',
 });
 
 api.interceptors.request.use((config) => {
