@@ -15,7 +15,8 @@ function getEstado(stock, minimo) {
 
 function Modal({ title, onClose, children }) {
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+    <div onClick={e => e.target === e.currentTarget && onClose()}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
       <div style={{ background: '#fff', borderRadius: 14, width: 520, maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
         <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, background: '#fff', zIndex: 1 }}>
           <span style={{ fontSize: 15, fontWeight: 700 }}>{title}</span>
@@ -28,9 +29,17 @@ function Modal({ title, onClose, children }) {
 }
 
 function ProductoForm({ inicial, categorias, proveedores, onSave, onClose }) {
-  const [form, setForm] = useState(inicial || {
-    nombre: '', detalle: '', precio_compra: '', precio_venta: '',
-    stock: '', stock_minimo: 5, id_categoria: '', id_proveedor: '', estado: 1
+  const esEdicion = !!inicial?.id;
+  const [form, setForm] = useState({
+    nombre:        inicial?.nombre || '',
+    detalle:       inicial?.detalle || '',
+    precio_compra: inicial?.precio_compra || '',
+    precio_venta:  inicial?.precio_venta || '',
+    stock:         inicial?.stock || '',
+    stock_minimo:  inicial?.stock_minimo || 5,
+    id_categoria:  inicial?.id_categoria || '',
+    id_proveedor:  inicial?.id_proveedor || '',
+    estado:        inicial?.estado ?? 1,
   });
 
   const [imagenFile, setImagenFile] = useState(null);
@@ -43,31 +52,21 @@ function ProductoForm({ inicial, categorias, proveedores, onSave, onClose }) {
     e.preventDefault();
     setLoading(true);
     try {
- 
-      const fd = new FormData();
-      Object.entries(form).forEach(([k, v]) => {
-        if (v !== null && v !== undefined && v !== '') {
-          fd.append(k, v);
-        }
-      });
 
-      if (imagenFile) {
-        fd.append('imagen', imagenFile);
-      }
-      if (eliminarImagen) {
-        fd.append('eliminar_imagen', '1');
-      }
+      const payload = { ...form };
+      // Al editar no enviamos stock — solo se cambia via ajuste
+      if (esEdicion) delete payload.stock;
 
-      if (inicial?.id) {
-        fd.append('_method', 'PUT');
-        await api.post(`/productos/${inicial.id}`, fd, {
-          headers: { 'Content-Type': 'multipart/form-data' },
+      if (esEdicion) {
+        const formData = new FormData();
+        Object.entries(payload).forEach(([k, v]) => {
+          if (v !== null && v !== undefined) formData.append(k, v);
         });
+        await api.post(`/productos/${inicial.id}`, formData);
         toast.success('Producto actualizado');
       } else {
-        await api.post('/productos', fd, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        await api.post('/productos', payload);
+
         toast.success('Producto creado');
       }
       onSave();
@@ -116,7 +115,8 @@ function ProductoForm({ inicial, categorias, proveedores, onSave, onClose }) {
           {input('Precio venta ($)', 'precio_venta', 'number', '0.00')}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          {input('Stock inicial', 'stock', 'number', '0')}
+          {/* Solo mostrar stock al crear, no al editar */}
+          {!esEdicion && input('Stock inicial', 'stock', 'number', '0')}
           {input('Stock mínimo', 'stock_minimo', 'number', '5')}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -137,6 +137,11 @@ function ProductoForm({ inicial, categorias, proveedores, onSave, onClose }) {
             </select>
           </div>
         </div>
+        {esEdicion && (
+          <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#92400e' }}>
+            💡 Para modificar el stock usa el botón <strong>Ajustar stock</strong> en la tarjeta del producto.
+          </div>
+        )}
       </div>
       <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, justifyContent: 'flex-end', position: 'sticky', bottom: 0, background: '#fff' }}>
         <button type="button" onClick={onClose} style={{ padding: '8px 16px', border: '1px solid var(--border)', background: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: 'var(--muted)' }}>Cancelar</button>
@@ -229,7 +234,11 @@ export default function Productos() {
   const [selected, setSelected] = useState(null);
 
   const fetchAll = async () => {
-    const [p, c, pr] = await Promise.all([api.get('/productos'), api.get('/categorias'), api.get('/proveedores')]);
+    const [p, c, pr] = await Promise.all([
+      api.get('/productos'),
+      api.get('/categorias'),
+      api.get('/proveedores'),
+    ]);
     setProductos(p.data.data || []);
     setCategorias(c.data.data || []);
     setProveedores(pr.data.data || []);
@@ -247,7 +256,9 @@ export default function Productos() {
   });
 
   const toggleEstado = async (p) => {
-    await api.put(`/productos/${p.id}`, { estado: p.estado === 1 ? 0 : 1 });
+    const formData = new FormData();
+    formData.append('estado', p.estado === 1 ? 0 : 1);
+    await api.post(`/productos/${p.id}`, formData);
     toast.success(p.estado === 1 ? 'Producto desactivado' : 'Producto activado');
     fetchAll();
   };
@@ -262,7 +273,6 @@ export default function Productos() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* Filtros */}
       <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
         <div style={{ position: 'relative', flex: 1, minWidth: 180 }}>
           <Search size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
@@ -287,7 +297,6 @@ export default function Productos() {
         </button>
       </div>
 
-      {/* Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 14 }}>
         {filtered.map(p => {
           const est = p.estado === 0 ? 'inactive' : getEstado(p.stock, p.stock_minimo);
@@ -295,18 +304,13 @@ export default function Productos() {
           const pct = Math.min(100, Math.round((p.stock / Math.max(p.stock_minimo * 2, 1)) * 100));
           return (
             <div key={p.id} style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', opacity: p.estado === 0 ? 0.6 : 1, transition: 'all 0.2s' }}>
-              {/* Imagen del producto en la card. Si no hay imagen, muestra el placeholder. */}
-              <div style={{ height: 100, background: 'linear-gradient(135deg, #f0f5ff, #e8f0fe)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
-                {p.imagen_url ? (
-                  <img
-                    src={p.imagen_url}
-                    alt={p.nombre}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    // Si la imagen falla al cargar, muestra el icono fallback
-                    onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
-                  />
-                ) : null}
-                {!p.imagen_url && <Package size={32} color="#93afd4" />}
++
+              <div style={{ height: 110, background: 'linear-gradient(135deg, #f0f5ff, #e8f0fe)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+                {p.imagen
+                  ? <img src={p.imagen} alt={p.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : <Package size={32} color="#93afd4" />
+                }
+
                 <span style={{ position: 'absolute', top: 8, right: 8, fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: color + '20', color }}>
                   {est === 'inactive' ? 'Inactivo' : estadoLabel[est]}
                 </span>
@@ -325,10 +329,10 @@ export default function Productos() {
                 </div>
                 <div style={{ display: 'flex', gap: 5, borderTop: '1px solid #f1f5f9', paddingTop: 10 }}>
                   {[
-                    { icon: Eye, title: 'Ver', action: () => { setSelected(p); setModal('ver'); } },
-                    { icon: ArrowLeftRight, title: 'Ajustar stock', action: () => { setSelected(p); setModal('ajuste'); } },
-                    { icon: Pencil, title: 'Editar', action: () => { setSelected(p); setModal('form'); } },
-                    { icon: PowerOff, title: p.estado === 1 ? 'Desactivar' : 'Activar', action: () => toggleEstado(p), danger: true },
+                    { icon: Eye,           title: 'Ver',      action: () => { setSelected(p); setModal('ver'); } },
+                    { icon: ArrowLeftRight,title: 'Ajustar',  action: () => { setSelected(p); setModal('ajuste'); } },
+                    { icon: Pencil,        title: 'Editar',   action: () => { setSelected(p); setModal('form'); } },
+                    { icon: PowerOff,      title: p.estado === 1 ? 'Desactivar' : 'Activar', action: () => toggleEstado(p), danger: true },
                   ].map(({ icon: Icon, title, action, danger }) => (
                     <button key={title} onClick={action} title={title} style={{
                       flex: 1, padding: 6, borderRadius: 6, border: '1px solid var(--border)',
@@ -349,7 +353,6 @@ export default function Productos() {
         )}
       </div>
 
-      {/* Modales */}
       {modal === 'form' && (
         <Modal title={selected ? `Editar: ${selected.nombre}` : 'Agregar producto'} onClose={() => setModal(null)}>
           <ProductoForm inicial={selected} categorias={categorias} proveedores={proveedores}
@@ -364,22 +367,20 @@ export default function Productos() {
       {modal === 'ver' && selected && (
         <Modal title="Detalle del producto" onClose={() => setModal(null)}>
           <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {/* Imagen grande arriba en el modal de detalle */}
-            {selected.imagen_url && (
-              <div style={{ width: '100%', height: 200, borderRadius: 8, overflow: 'hidden', background: '#f8fafc', border: '1px solid var(--border)' }}>
-                <img src={selected.imagen_url} alt={selected.nombre}
-                  style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-              </div>
+
+            {p?.imagen && (
+              <img src={selected.imagen} alt={selected.nombre} style={{ width: '100%', height: 180, objectFit: 'cover', borderRadius: 8 }} />
+
             )}
             {[
-              ['Nombre', selected.nombre],
-              ['Detalle', selected.detalle],
+              ['Nombre',        selected.nombre],
+              ['Detalle',       selected.detalle],
               ['Precio compra', `$${Number(selected.precio_compra).toFixed(2)}`],
-              ['Precio venta', `$${Number(selected.precio_venta).toFixed(2)}`],
-              ['Stock', selected.stock],
-              ['Stock mínimo', selected.stock_minimo],
-              ['Categoría', selected.categoria?.nombre],
-              ['Proveedor', selected.proveedor?.nombre],
+              ['Precio venta',  `$${Number(selected.precio_venta).toFixed(2)}`],
+              ['Stock',         selected.stock],
+              ['Stock mínimo',  selected.stock_minimo],
+              ['Categoría',     selected.categoria?.nombre],
+              ['Proveedor',     selected.proveedor?.nombre],
             ].map(([k, v]) => (
               <div key={k} style={{ display: 'flex', gap: 12, padding: '8px 0', borderBottom: '1px solid #f1f5f9' }}>
                 <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', minWidth: 120 }}>{k}</span>
