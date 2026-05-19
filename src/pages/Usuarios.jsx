@@ -3,6 +3,9 @@ import api from '../api/axios';
 import toast from 'react-hot-toast';
 import { Plus, Search, Pencil, PowerOff, Users, UserCheck, UserX } from 'lucide-react';
 
+const inputStyle = { padding: '9px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, outline: 'none', width: '100%' };
+const labelStyle = { fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 };
+
 function Modal({ title, onClose, children }) {
   return (
     <div onClick={e => e.target === e.currentTarget && onClose()}
@@ -24,18 +27,38 @@ function UsuarioForm({ inicial, onSave, onClose }) {
     name:     inicial?.name     || '',
     email:    inicial?.email    || '',
     password: '',
-    rol:      inicial?.roles?.[0] || 'Empleado',
+    rol:      inicial?.roles?.[0] || '',
     estado:   inicial?.estado   ?? 1,
   });
+  const [rolesDisponibles, setRolesDisponibles] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
+  useEffect(() => {
+    api.get('/roles').then(({ data }) => {
+      setRolesDisponibles(data.roles || []);
+    }).catch(() => {
+      toast.error('Error al cargar la lista de roles');
+    });
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!form.name || !form.email || (!esEdicion && !form.password) || !form.rol) {
+      toast.error('Por favor, completa todos los campos obligatorios.');
+      return;
+    }
+
     setLoading(true);
     try {
-      const payload = { ...form };
+      // CORRECCIÓN CRUCIAL: Mapeamos el rol en todas las variantes que espera Laravel/Spatie
+      const payload = { 
+        ...form,
+        role: form.rol,
+        roles: [form.rol]
+      };
+      
       if (esEdicion && !payload.password) delete payload.password;
 
       if (esEdicion) {
@@ -56,41 +79,38 @@ function UsuarioForm({ inicial, onSave, onClose }) {
     }
   };
 
-  const input = (label, key, type = 'text', placeholder = '') => (
+  const inputField = (label, key, type = 'text', placeholder = '') => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-      <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</label>
-      <input type={type} value={form[key]} onChange={e => set(key, e.target.value)} placeholder={placeholder}
-        style={{ padding: '9px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, outline: 'none' }} />
+      <label style={labelStyle}>{label}</label>
+      <input type={type} value={form[key]} onChange={e => set(key, e.target.value)} placeholder={placeholder} style={inputStyle} disabled={key === 'email' && esEdicion} />
     </div>
   );
 
   return (
     <form onSubmit={handleSubmit}>
       <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-        {input('Nombre completo', 'name', 'text', 'Ej. María González')}
-        {input('Correo electrónico', 'email', 'email', 'correo@ejemplo.com')}
+        {inputField('Nombre completo *', 'name', 'text', 'Ej. María González')}
+        {inputField('Correo electrónico *', 'email', 'email', 'correo@ejemplo.com')}
+        
         <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-          <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-            {esEdicion ? 'Nueva contraseña (dejar vacío para no cambiar)' : 'Contraseña'}
+          <label style={labelStyle}>
+            {esEdicion ? 'Nueva contraseña (dejar vacío para no cambiar)' : 'Contraseña *'}
           </label>
           <input type="password" value={form.password} onChange={e => set('password', e.target.value)}
-            placeholder={esEdicion ? 'Dejar vacío para no cambiar' : 'Mínimo 6 caracteres'}
-            style={{ padding: '9px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, outline: 'none' }} />
+            placeholder={esEdicion ? 'Dejar vacío para no cambiar' : 'Mínimo 6 caracteres'} style={inputStyle} />
         </div>
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-          <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Rol</label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            {['Administrador', 'Empleado'].map(r => (
-              <button key={r} type="button" onClick={() => set('rol', r)} style={{
-                padding: '10px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600,
-                border: `1.5px solid ${form.rol === r ? 'var(--accent)' : 'var(--border)'}`,
-                background: form.rol === r ? '#eff6ff' : 'none',
-                color: form.rol === r ? 'var(--accent)' : 'var(--muted)'
-              }}>{r}</button>
+          <label style={labelStyle}>Rol del Sistema *</label>
+          <select value={form.rol} onChange={e => set('rol', e.target.value)} style={inputStyle}>
+            <option value="">Selecciona un perfil...</option>
+            {rolesDisponibles.map(role => (
+              <option key={role.id} value={role.name}>{role.name}</option>
             ))}
-          </div>
+          </select>
         </div>
       </div>
+
       <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
         <button type="button" onClick={onClose} style={{ padding: '8px 16px', border: '1px solid var(--border)', background: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: 'var(--muted)' }}>Cancelar</button>
         <button type="submit" disabled={loading} style={{ padding: '8px 16px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
@@ -139,9 +159,12 @@ export default function Usuarios() {
 
   const initials = (name) => name?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
 
-  const rolColor = (rol) => rol === 'Administrador'
-    ? { bg: '#eff6ff', color: '#2563eb' }
-    : { bg: '#f0fdf4', color: '#059669' };
+  const styleRolBadge = (rol) => {
+    if (rol === 'Administrador' || rol === 'Admin') {
+      return { bg: '#eff6ff', color: '#2563eb' };
+    }
+    return { bg: '#f1f5f9', color: '#475569' };
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -201,7 +224,7 @@ export default function Usuarios() {
           </thead>
           <tbody>
             {filtered.map(u => {
-              const rc = rolColor(u.roles?.[0]);
+              const badgeStyle = styleRolBadge(u.roles?.[0]);
               return (
                 <tr key={u.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                   <td style={{ padding: '12px 20px' }}>
@@ -214,7 +237,7 @@ export default function Usuarios() {
                   </td>
                   <td style={{ padding: '12px 20px', fontSize: 13, color: 'var(--muted)' }}>{u.email}</td>
                   <td style={{ padding: '12px 20px' }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: rc.bg, color: rc.color }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: badgeStyle.bg, color: badgeStyle.color }}>
                       {u.roles?.[0] || 'Sin rol'}
                     </span>
                   </td>
@@ -235,10 +258,12 @@ export default function Usuarios() {
                         style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid var(--border)', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Pencil size={13} color="var(--muted)" />
                       </button>
-                      <button onClick={() => toggleEstado(u)} title={u.estado === 1 ? 'Desactivar' : 'Activar'}
-                        style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid var(--border)', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <PowerOff size={13} color={u.estado === 1 ? 'var(--danger)' : 'var(--success)'} />
-                      </button>
+                      {u.email !== 'admin@gdastore.com' && (
+                        <button onClick={() => toggleEstado(u)} title={u.estado === 1 ? 'Desactivar' : 'Activar'}
+                          style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid var(--border)', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <PowerOff size={13} color={u.estado === 1 ? 'var(--danger)' : 'var(--success)'} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

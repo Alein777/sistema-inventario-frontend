@@ -16,12 +16,24 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     try {
+      // 1. Enviamos las credenciales al backend
       const { data } = await api.post('/login', form);
+      
+      // 2. Cargamos el usuario y los permisos en el estado local blindado
       login(data.user, data.token);
+      
       toast.success('Bienvenido ' + data.user.name);
-      navigate('/');
-    } catch {
-      toast.error('Credenciales incorrectas');
+      
+      // 3. Pequeño respiro controlado para asegurar el render dinámico del Sidebar
+      setTimeout(() => {
+        navigate('/');
+      }, 100);
+
+    } catch (err) {
+      // CORRECCIÓN CRUCIAL: Captura el error exacto de Laravel en lugar de adivinar
+      const mensajeError = err.response?.data?.message || 'Error al conectar con el servidor';
+      toast.error(mensajeError);
+      console.error('Detalle del error en el Login:', err);
     } finally {
       setLoading(false);
     }
@@ -105,7 +117,7 @@ export default function Login() {
         {/* Footer del panel */}
         <div style={{ position: 'relative', zIndex: 1 }}>
           <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', margin: 0 }}>
-            © 2025 GDA Store — Sistema de Inventario
+            © 2026 GDA Store — Sistema de Inventario
           </p>
         </div>
       </div>

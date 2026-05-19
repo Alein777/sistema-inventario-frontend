@@ -9,6 +9,7 @@ import Proveedores from './pages/Proveedores';
 import Movimientos from './pages/Movimientos';
 import Usuarios from './pages/Usuarios';
 import Sidebar from './components/Layout/Sidebar';
+import Roles from './pages/Roles';
 import Topbar from './components/Layout/Topbar';
 
 function PrivateRoute({ children }) {
@@ -40,6 +41,7 @@ function AppRoutes() {
       <Route path="/proveedores" element={<PrivateRoute><AppLayout><Proveedores /></AppLayout></PrivateRoute>} />
       <Route path="/movimientos" element={<PrivateRoute><AppLayout><Movimientos /></AppLayout></PrivateRoute>} />
       <Route path="/usuarios" element={<PrivateRoute><AppLayout><Usuarios /></AppLayout></PrivateRoute>} />
+      <Route path="/roles" element={<PrivateRoute><AppLayout><Roles /></AppLayout></PrivateRoute>} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );

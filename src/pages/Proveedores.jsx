@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import api from '../api/axios';
+import { useAuth } from '../context/AuthContext'; 
 import toast from 'react-hot-toast';
 import {
-  Plus, Search, Pencil, PowerOff,
-  Building2, Phone, Mail,
-  CheckCircle, XCircle, Layers
+  Plus, Search, Pencil, PowerOff, Eye,
+  Building2, Phone, Mail, Globe, MapPin, Layers,
+  CheckCircle, XCircle
 } from 'lucide-react';
 
 function Modal({ title, onClose, children }) {
@@ -23,13 +24,132 @@ function Modal({ title, onClose, children }) {
   );
 }
 
+// COMPONENTE DETALLE: Lee el país guardado de la BD real
+function ProveedorDetalle({ proveedor, onClose }) {
+  const [departamentos, setDepartamentos] = useState([]);
+
+  useEffect(() => {
+    api.get('/departamentos')
+      .then(({ data }) => {
+        setDepartamentos(data.data || data);
+      })
+      .catch(() => {});
+  }, []);
+
+  const labelStyle = { fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 };
+  const valueStyle = { fontSize: 13, fontWeight: 500, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 };
+  const blockStyle = { display: 'flex', flexDirection: 'column', gap: 4, padding: '10px 0' };
+  const rowStyle = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, borderBottom: '1px solid #f1f5f9' };
+
+  const nombrePais = proveedor.pais || (proveedor.tipo === 'Nacional' ? 'El Salvador' : 'No registrado');
+  
+  const idDepto = proveedor.municipio?.id_departamento;
+  const deptoEncontrado = departamentos.find(d => String(d.id) === String(idDepto));
+  const textDepto = deptoEncontrado ? deptoEncontrado.nombre : '—';
+  const nombreMunicipio = proveedor.municipio?.nombre || '—';
+
+  return (
+    <div>
+      <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+        
+        <div style={{ ...rowStyle, gridTemplateColumns: '1fr' }}>
+          <div style={blockStyle}>
+            <span style={labelStyle}>Nombre de la Empresa</span>
+            <span style={{ ...valueStyle, fontSize: 16, fontWeight: 700 }}>
+              <Building2 size={16} color="var(--accent)" /> {proveedor.nombre}
+            </span>
+          </div>
+        </div>
+
+        <div style={rowStyle}>
+          <div style={blockStyle}>
+            <span style={labelStyle}>Contacto</span>
+            <span style={valueStyle}>{proveedor.contacto}</span>
+          </div>
+          <div style={blockStyle}>
+            <span style={labelStyle}>Teléfono</span>
+            <span style={valueStyle}>
+              <Phone size={14} color="var(--muted)" /> {proveedor.telefono}
+            </span>
+          </div>
+        </div>
+
+        <div style={rowStyle}>
+          <div style={blockStyle}>
+            <span style={labelStyle}>Correo Electrónico</span>
+            <span style={{ ...valueStyle, color: proveedor.email ? 'var(--accent)' : 'var(--muted)' }}>
+              <Mail size={14} color="var(--muted)" /> {proveedor.email || 'No registrado'}
+            </span>
+          </div>
+          <div style={blockStyle}>
+            <span style={labelStyle}>Tipo de Proveedor</span>
+            <span style={valueStyle}>
+              <span style={{ background: '#f0f2f5', color: '#6b7280', fontSize: 11, padding: '2px 8px', borderRadius: 5, fontWeight: 600 }}>
+                {proveedor.tipo || 'No especificado'}
+              </span>
+            </span>
+          </div>
+        </div>
+
+        <div style={rowStyle}>
+          <div style={blockStyle}>
+            <span style={labelStyle}>País</span>
+            <span style={valueStyle}>
+              <Globe size={14} color="var(--muted)" /> {nombrePais}
+            </span>
+          </div>
+          <div style={blockStyle}>
+            <span style={labelStyle}>Estado</span>
+            <span style={valueStyle}>
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20,
+                background: proveedor.estado === 1 ? '#f0fdf4' : '#f1f5f9',
+                color: proveedor.estado === 1 ? 'var(--success)' : 'var(--muted)'
+              }}>
+                <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor' }} />
+                {proveedor.estado === 1 ? 'Activo' : 'Inactivo'}
+              </span>
+            </span>
+          </div>
+        </div>
+
+        {proveedor.tipo === 'Nacional' && (
+          <div style={{ ...rowStyle, borderBottom: 'none' }}>
+            <div style={blockStyle}>
+              <span style={labelStyle}>Departamento</span>
+              <span style={valueStyle}>
+                <MapPin size={14} color="var(--muted)" /> {textDepto}
+              </span>
+            </div>
+            <div style={blockStyle}>
+              <span style={labelStyle}>Municipio</span>
+              <span style={valueStyle}>
+                <MapPin size={14} color="var(--muted)" /> {nombreMunicipio}
+              </span>
+            </div>
+          </div>
+        )}
+
+      </div>
+
+      <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end' }}>
+        <button type="button" onClick={onClose} style={{ padding: '8px 16px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+          Cerrar Vista
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ProveedorForm({ inicial, onSave, onClose }) {
   const [form, setForm] = useState({
-    nombre:       inicial?.nombre       || '',
-    contacto:     inicial?.contacto     || '',
-    telefono:     inicial?.telefono     || '',
-    email:        inicial?.email        || '',
-    tipo:         inicial?.tipo         || '',
+    nombre:       inicial?.nombre        || '',
+    contacto:     inicial?.contacto      || '',
+    telefono:     inicial?.telefono      || '',
+    email:        inicial?.email         || '',
+    tipo:         inicial?.tipo          || '',
+    pais:         inicial?.pais          || '',
     id_municipio: inicial?.id_municipio || '',
   });
   const [departamentos, setDepartamentos] = useState([]);
@@ -44,8 +164,8 @@ function ProveedorForm({ inicial, onSave, onClose }) {
   }, []);
 
   useEffect(() => {
-    if (inicial?.municipio?.departamento_id) {
-      const depId = inicial.municipio.departamento_id;
+    if (inicial?.municipio?.id_departamento) {
+      const depId = inicial.municipio.id_departamento;
       setDeptoSel(depId);
       api.get(`/departamentos/${depId}/municipios`).then(({ data }) => {
         setMunicipios(data.data || data);
@@ -64,9 +184,27 @@ function ProveedorForm({ inicial, onSave, onClose }) {
     } catch { setMunicipios([]); }
   };
 
-  const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
+  const set = (k) => (e) => {
+    const value = e.target.value;
+    setForm(f => {
+      const nuevoForm = { ...f, [k]: value };
+      
+      if (k === 'tipo') {
+        if (value !== 'Nacional') {
+          setDeptoSel('');
+          setMunicipios([]);
+          nuevoForm.id_municipio = '';
+        }
+        if (value === 'Nacional') {
+          nuevoForm.pais = 'El Salvador';
+        } else if (!inicial?.id) {
+          nuevoForm.pais = ''; 
+        }
+      }
+      return nuevoForm;
+    });
+  };
 
-  // Solo permite 8 dígitos numéricos
   const handleTelefono = (e) => {
     const val = e.target.value.replace(/\D/g, '').slice(0, 8);
     setForm(f => ({ ...f, telefono: val }));
@@ -77,6 +215,14 @@ function ProveedorForm({ inicial, onSave, onClose }) {
     if (!form.nombre.trim())          { toast.error('Ingresa el nombre');              return; }
     if (!form.contacto.trim())        { toast.error('Ingresa el contacto');            return; }
     if (form.telefono.length !== 8)   { toast.error('El teléfono debe tener 8 dígitos'); return; }
+    if (!form.tipo)                   { toast.error('Selecciona el tipo de proveedor'); return; }
+    if (!form.pais.trim())            { toast.error('Ingresa el país');                return; }
+    
+    if (form.tipo === 'Nacional') {
+      if (!deptoSel)              { toast.error('Selecciona el departamento'); return; }
+      if (!form.id_municipio)    { toast.error('Selecciona el municipio'); return; }
+    }
+
     setLoading(true);
     try {
       if (inicial?.id) {
@@ -132,7 +278,7 @@ function ProveedorForm({ inicial, onSave, onClose }) {
             <input type="email" value={form.email} onChange={set('email')} placeholder="correo@empresa.com" style={inputStyle} />
           </div>
           <div style={field}>
-            <label style={labelStyle}>Tipo</label>
+            <label style={labelStyle}>Tipo *</label>
             <select value={form.tipo} onChange={set('tipo')} style={inputStyle}>
               <option value="">Seleccionar...</option>
               <option value="Nacional">Nacional</option>
@@ -143,26 +289,39 @@ function ProveedorForm({ inicial, onSave, onClose }) {
           </div>
         </div>
 
-        <div style={row}>
-          <div style={field}>
-            <label style={labelStyle}>Departamento</label>
-            <select value={deptoSel} onChange={handleDepto} style={inputStyle}>
-              <option value="">Seleccionar...</option>
-              {departamentos.map(d => (
-                <option key={d.id} value={d.id}>{d.nombre}</option>
-              ))}
-            </select>
-          </div>
-          <div style={field}>
-            <label style={labelStyle}>Municipio</label>
-            <select value={form.id_municipio} onChange={set('id_municipio')} style={inputStyle} disabled={!deptoSel}>
-              <option value="">Seleccionar...</option>
-              {municipios.map(m => (
-                <option key={m.id} value={m.id}>{m.nombre}</option>
-              ))}
-            </select>
-          </div>
+        <div style={field}>
+          <label style={labelStyle}>País *</label>
+          <input 
+            value={form.pais} 
+            onChange={set('pais')} 
+            placeholder={form.tipo === 'Nacional' ? 'El Salvador' : 'Ej. Estados Unidos'} 
+            style={inputStyle} 
+            disabled={form.tipo === 'Nacional'} 
+          />
         </div>
+
+        {form.tipo === 'Nacional' && (
+          <div style={row}>
+            <div style={field}>
+              <label style={labelStyle}>Departamento *</label>
+              <select value={deptoSel} onChange={handleDepto} style={inputStyle}>
+                <option value="">Seleccionar...</option>
+                {departamentos.map(d => (
+                  <option key={d.id} value={d.id}>{d.nombre}</option>
+                ))}
+              </select>
+            </div>
+            <div style={field}>
+              <label style={labelStyle}>Municipio *</label>
+              <select value={form.id_municipio} onChange={set('id_municipio')} style={inputStyle} disabled={!deptoSel}>
+                <option value="">Seleccionar...</option>
+                {municipios.map(m => (
+                  <option key={m.id} value={m.id}>{m.nombre}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
 
       </div>
 
@@ -177,6 +336,7 @@ function ProveedorForm({ inicial, onSave, onClose }) {
 }
 
 export default function Proveedores() {
+  const { tienePermiso } = useAuth(); // <-- Inyectamos el control de acceso global
   const [proveedores, setProveedores] = useState([]);
   const [search, setSearch]           = useState('');
   const [tab, setTab]                 = useState('todos');
@@ -215,7 +375,6 @@ export default function Proveedores() {
   const activos   = proveedores.filter(p => p.estado === 1).length;
   const inactivos = proveedores.filter(p => p.estado === 0).length;
 
-  // Igual que Categorias: solo manda estado
   const toggleEstado = async (p) => {
     await api.put(`/proveedores/${p.id}`, { estado: p.estado === 1 ? 0 : 1 });
     toast.success(p.estado === 1 ? 'Proveedor desactivado' : 'Proveedor activado');
@@ -272,15 +431,19 @@ export default function Proveedores() {
             style={{ width: '100%', padding: '9px 12px 9px 34px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, outline: 'none', background: '#fff' }} />
         </div>
         <div style={{ display: 'flex', gap: 4, background: '#f1f5f9', padding: 3, borderRadius: 8 }}>
-          {[['todos','Todos'], ['activos','Activos'], ['inactivos','Inactivos']].map(([val, label]) => (
+          {[["todos","Todos"], ["activos","Activos"], ["inactivos","Inactivos"]].map(([val, label]) => (
             <button key={val} onClick={() => setTab(val)} style={btnStyle(tab === val)}>{label}</button>
           ))}
         </div>
-        <button
-          onClick={() => { setSelected(null); setModal('form'); }}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--accent)', color: '#fff', border: 'none', padding: '9px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-          <Plus size={14} /> Nuevo proveedor
-        </button>
+
+        {/* CONTROL: Solo perfiles con el permiso asignado ven el botón para crear */}
+        {tienePermiso('ver-proveedores') && (
+          <button
+            onClick={() => { setSelected(null); setModal('form'); }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--accent)', color: '#fff', border: 'none', padding: '9px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            <Plus size={14} /> Nuevo proveedor
+          </button>
+        )}
       </div>
 
       {/* Tabla */}
@@ -351,14 +514,27 @@ export default function Proveedores() {
                     </td>
                     <td style={{ padding: '12px 20px' }}>
                       <div style={{ display: 'flex', gap: 6 }}>
-                        <button onClick={() => { setSelected(p); setModal('form'); }} title="Editar"
+                        {/* El botón de ver detalle se queda público para cualquiera que pueda ver el módulo */}
+                        <button onClick={() => { setSelected(p); setModal('view'); }} title="Ver Detalle"
                           style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid var(--border)', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Pencil size={13} color="var(--muted)" />
+                          <Eye size={13} color="var(--accent)" />
                         </button>
-                        <button onClick={() => toggleEstado(p)} title={p.estado === 1 ? 'Desactivar' : 'Activar'}
-                          style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid var(--border)', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <PowerOff size={13} color={p.estado === 1 ? 'var(--danger)' : 'var(--success)'} />
-                        </button>
+
+                        {/* CONTROL: Oculta la edición según privilegios de Spatie */}
+                        {tienePermiso('ver-proveedores') && (
+                          <button onClick={() => { setSelected(p); setModal('form'); }} title="Editar"
+                            style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid var(--border)', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Pencil size={13} color="var(--muted)" />
+                          </button>
+                        )}
+
+                        {/* CONTROL: Oculta la desactivación de registros */}
+                        {tienePermiso('ver-proveedores') && (
+                          <button onClick={() => toggleEstado(p)} title={p.estado === 1 ? 'Desactivar' : 'Activar'}
+                            style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid var(--border)', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <PowerOff size={13} color={p.estado === 1 ? 'var(--danger)' : 'var(--success)'} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -376,9 +552,16 @@ export default function Proveedores() {
         )}
       </div>
 
+      {/* RENDERIZADO DE MODALES */}
       {modal === 'form' && (
         <Modal title={selected ? `Editar: ${selected.nombre}` : 'Nuevo proveedor'} onClose={() => setModal(null)}>
           <ProveedorForm inicial={selected} onSave={onSave} onClose={() => setModal(null)} />
+        </Modal>
+      )}
+
+      {modal === 'view' && selected && (
+        <Modal title="Información del Proveedor" onClose={() => { setModal(null); setSelected(null); }}>
+          <ProveedorDetalle proveedor={selected} onClose={() => { setModal(null); setSelected(null); }} />
         </Modal>
       )}
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axios';
+import { useAuth } from '../context/AuthContext'; 
 import toast from 'react-hot-toast';
 import { Plus, Search, Eye, Pencil, ArrowLeftRight, PowerOff, Package } from 'lucide-react';
 
@@ -33,34 +34,54 @@ function ProductoForm({ inicial, categorias, proveedores, onSave, onClose }) {
     nombre:        inicial?.nombre || '',
     detalle:       inicial?.detalle || '',
     precio_compra: inicial?.precio_compra || '',
-    precio_venta:  inicial?.precio_venta || '',
     stock:         inicial?.stock || '',
     stock_minimo:  inicial?.stock_minimo || 5,
     id_categoria:  inicial?.id_categoria || '',
     id_proveedor:  inicial?.id_proveedor || '',
     estado:        inicial?.estado ?? 1,
   });
+  const [imagen, setImagen] = useState(null);
+  const [preview, setPreview] = useState(inicial?.imagen_url || null);
   const [loading, setLoading] = useState(false);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const handleImagenChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const limiteMaximo = 5 * 1024 * 1024; // 5 MB
+      
+      if (file.size > limiteMaximo) {
+        toast.error('La imagen es demasiado pesada. El máximo permitido es 5 MB.');
+        e.target.value = ''; 
+        return;
+      }
+
+      setImagen(file);
+      setPreview(URL.createObjectURL(file));
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const payload = { ...form };
-      // Al editar no enviamos stock — solo se cambia via ajuste
-      if (esEdicion) delete payload.stock;
+      const formData = new FormData();
+      Object.entries(form).forEach(([k, v]) => {
+        if (v !== null && v !== undefined) formData.append(k, v);
+      });
+      
+      if (imagen) {
+        formData.append('imagen', imagen);
+      }
+      
+      if (esEdicion) formData.delete('stock');
 
       if (esEdicion) {
-        const formData = new FormData();
-        Object.entries(payload).forEach(([k, v]) => {
-          if (v !== null && v !== undefined) formData.append(k, v);
-        });
         await api.post(`/productos/${inicial.id}`, formData);
         toast.success('Producto actualizado');
       } else {
-        await api.post('/productos', payload);
+        await api.post('/productos', formData);
         toast.success('Producto creado');
       }
       onSave();
@@ -75,33 +96,77 @@ function ProductoForm({ inicial, categorias, proveedores, onSave, onClose }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
       <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</label>
       <input type={type} value={form[key]} onChange={e => set(key, e.target.value)} placeholder={placeholder}
-        style={{ padding: '9px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, outline: 'none' }} />
+        style={{ padding: '9px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, outline: 'none', width: '100%' }} />
     </div>
   );
 
   return (
     <form onSubmit={handleSubmit}>
       <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            Imagen del producto
+          </label>
+          
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <label style={{
+              width: 115,
+              height: 115,
+              border: preview ? '1px solid var(--border)' : '2px dashed #2563eb',
+              borderRadius: 14,
+              overflow: 'hidden',
+              background: '#f8fafc',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              position: 'relative',
+              gap: 6
+            }}
+            >
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/jpg,image/webp"
+                onChange={handleImagenChange}
+                style={{ display: 'none' }}
+              />
+
+              {preview ? (
+                <img src={preview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <>
+                  <Package size={26} color="#94a3b8" />
+                  <span style={{ fontSize: 11, color: '#475569', fontWeight: 500 }}>Subir foto</span>
+                </>
+              )}
+            </label>
+          </div>
+        </div>
+
         {input('Nombre', 'nombre', 'text', 'Ej. Laptop HP 15s')}
+        
         <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
           <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Detalle</label>
           <textarea value={form.detalle} onChange={e => set('detalle', e.target.value)} placeholder="Descripción del producto..."
             style={{ padding: '9px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, outline: 'none', resize: 'none', height: 70 }} />
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        
+        <div>
           {input('Precio compra ($)', 'precio_compra', 'number', '0.00')}
-          {input('Precio venta ($)', 'precio_venta', 'number', '0.00')}
         </div>
+        
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          {/* Solo mostrar stock al crear, no al editar */}
           {!esEdicion && input('Stock inicial', 'stock', 'number', '0')}
           {input('Stock mínimo', 'stock_minimo', 'number', '5')}
         </div>
+        
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Categoría</label>
             <select value={form.id_categoria} onChange={e => set('id_categoria', e.target.value)}
-              style={{ padding: '9px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, outline: 'none' }}>
+              style={{ padding: '9px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, outline: 'none', width: '100%' }}>
               <option value="">Seleccionar</option>
               {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
             </select>
@@ -109,7 +174,7 @@ function ProductoForm({ inicial, categorias, proveedores, onSave, onClose }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Proveedor</label>
             <select value={form.id_proveedor} onChange={e => set('id_proveedor', e.target.value)}
-              style={{ padding: '9px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, outline: 'none' }}>
+              style={{ padding: '9px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, outline: 'none', width: '100%' }}>
               <option value="">Seleccionar</option>
               {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
             </select>
@@ -140,7 +205,7 @@ function AjusteModal({ producto, onSave, onClose }) {
     setLoading(true);
     try {
       await api.post('/movimientos', { id_producto: producto.id, ...form });
-      toast.success('Stock ajustado correctamente');
+      toast.success('Stock adjusted correctly');
       onSave();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Error al ajustar');
@@ -204,6 +269,7 @@ function AjusteModal({ producto, onSave, onClose }) {
 }
 
 export default function Productos() {
+  const { tienePermiso } = useAuth();
   const [productos, setProductos] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [proveedores, setProveedores] = useState([]);
@@ -270,10 +336,14 @@ export default function Productos() {
             </button>
           ))}
         </div>
-        <button onClick={() => { setSelected(null); setModal('form'); }}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--accent)', color: '#fff', border: 'none', padding: '9px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-          <Plus size={14} /> Agregar
-        </button>
+        
+        {/* CONTROL: Solo creadores ven el botón Agregar */}
+        {tienePermiso('crear-productos') && (
+          <button onClick={() => { setSelected(null); setModal('form'); }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--accent)', color: '#fff', border: 'none', padding: '9px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            <Plus size={14} /> Agregar
+          </button>
+        )}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 14 }}>
@@ -281,11 +351,20 @@ export default function Productos() {
           const est = p.estado === 0 ? 'inactive' : getEstado(p.stock, p.stock_minimo);
           const color = est === 'inactive' ? 'var(--muted)' : estadoColor[est];
           const pct = Math.min(100, Math.round((p.stock / Math.max(p.stock_minimo * 2, 1)) * 100));
+
+          // Filtro dinámico de acciones en base a los permisos reales del usuario en sesión
+          const botonesAccion = [
+            { icon: Eye,            title: 'Ver',     action: () => { setSelected(p); setModal('ver'); }, mostrar: true },
+            { icon: ArrowLeftRight, title: 'Ajustar', action: () => { setSelected(p); setModal('ajuste'); }, mostrar: tienePermiso('ajustar-stock') },
+            { icon: Pencil,         title: 'Editar',  action: () => { setSelected(p); setModal('form'); }, mostrar: tienePermiso('editar-productos') },
+            { icon: PowerOff,       title: p.estado === 1 ? 'Desactivar' : 'Activar', action: () => toggleEstado(p), danger: true, mostrar: tienePermiso('desactivar-productos') },
+          ].filter(b => b.mostrar); // Quitamos los botones no autorizados del array
+
           return (
             <div key={p.id} style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', opacity: p.estado === 0 ? 0.6 : 1, transition: 'all 0.2s' }}>
               <div style={{ height: 110, background: 'linear-gradient(135deg, #f0f5ff, #e8f0fe)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
-                {p.imagen
-                  ? <img src={p.imagen} alt={p.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                {p.imagen_url
+                  ? <img src={p.imagen_url} alt={p.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : <Package size={32} color="#93afd4" />
                 }
                 <span style={{ position: 'absolute', top: 8, right: 8, fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: color + '20', color }}>
@@ -295,22 +374,20 @@ export default function Productos() {
               <div style={{ padding: 12 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nombre}</div>
                 <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8 }}>{p.categoria?.nombre}</div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent)' }}>${Number(p.precio_venta).toFixed(2)}</div>
-                <div style={{ fontSize: 10, color: 'var(--muted)', marginBottom: 8 }}>Compra: <strong>${Number(p.precio_compra).toFixed(2)}</strong></div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--muted)', marginBottom: 10 }}>
+                
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent)' }}>Precio: ${Number(p.precio_compra).toFixed(2)}</div>
+                
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--muted)', marginBottom: 10, marginTop: 8 }}>
                   <span>{p.stock} uds</span>
                   <div style={{ flex: 1, height: 4, background: '#f1f5f9', borderRadius: 4, overflow: 'hidden' }}>
                     <div style={{ width: pct + '%', height: '100%', background: color, borderRadius: 4 }} />
                   </div>
                   <span>mín {p.stock_minimo}</span>
                 </div>
+                
+                {/* Renderizado condicional de los botones limpios */}
                 <div style={{ display: 'flex', gap: 5, borderTop: '1px solid #f1f5f9', paddingTop: 10 }}>
-                  {[
-                    { icon: Eye,           title: 'Ver',      action: () => { setSelected(p); setModal('ver'); } },
-                    { icon: ArrowLeftRight,title: 'Ajustar',  action: () => { setSelected(p); setModal('ajuste'); } },
-                    { icon: Pencil,        title: 'Editar',   action: () => { setSelected(p); setModal('form'); } },
-                    { icon: PowerOff,      title: p.estado === 1 ? 'Desactivar' : 'Activar', action: () => toggleEstado(p), danger: true },
-                  ].map(({ icon: Icon, title, action, danger }) => (
+                  {botonesAccion.map(({ icon: Icon, title, action, danger }) => (
                     <button key={title} onClick={action} title={title} style={{
                       flex: 1, padding: 6, borderRadius: 6, border: '1px solid var(--border)',
                       background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
@@ -344,18 +421,17 @@ export default function Productos() {
       {modal === 'ver' && selected && (
         <Modal title="Detalle del producto" onClose={() => setModal(null)}>
           <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {p?.imagen && (
-              <img src={selected.imagen} alt={selected.nombre} style={{ width: '100%', height: 180, objectFit: 'cover', borderRadius: 8 }} />
+            {selected?.imagen_url && (
+              <img src={selected.imagen_url} alt={selected.nombre} style={{ width: '100%', height: 180, objectFit: 'cover', borderRadius: 8 }} />
             )}
             {[
-              ['Nombre',        selected.nombre],
-              ['Detalle',       selected.detalle],
-              ['Precio compra', `$${Number(selected.precio_compra).toFixed(2)}`],
-              ['Precio venta',  `$${Number(selected.precio_venta).toFixed(2)}`],
-              ['Stock',         selected.stock],
-              ['Stock mínimo',  selected.stock_minimo],
-              ['Categoría',     selected.categoria?.nombre],
-              ['Proveedor',     selected.proveedor?.nombre],
+              ['Nombre',         selected.nombre],
+              ['Detalle',        selected.detalle],
+              ['Precio compra',  `$${Number(selected.precio_compra).toFixed(2)}`],
+              ['Stock',          selected.stock],
+              ['Stock mínimo',   selected.stock_minimo],
+              ['Categoría',      selected.categoria?.nombre],
+              ['Proveedor',      selected.proveedor?.nombre],
             ].map(([k, v]) => (
               <div key={k} style={{ display: 'flex', gap: 12, padding: '8px 0', borderBottom: '1px solid #f1f5f9' }}>
                 <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', minWidth: 120 }}>{k}</span>

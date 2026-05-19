@@ -19,8 +19,8 @@ export default function ImageUploader({ imagenActualUrl, onImageChange, onImageR
       alert('El archivo seleccionado no es una imagen');
       return;
     }
-    if (file.size > 2 * 1024 * 1024) {
-      alert('La imagen no debe superar 2 MB');
+    if (file.size > 5 * 1024 * 1024) {
+      alert('La imagen no debe superar 5 MB');
       return;
     }
 

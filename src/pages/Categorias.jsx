@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axios';
+import { useAuth } from '../context/AuthContext'; 
 import toast from 'react-hot-toast';
 import { Plus, Search, Pencil, PowerOff, Tag, Layers, CheckCircle, XCircle } from 'lucide-react';
 
@@ -62,6 +63,7 @@ function CategoriaForm({ inicial, onSave, onClose }) {
 }
 
 export default function Categorias() {
+  const { tienePermiso } = useAuth(); // <-- Inyectamos el control de accesos dinámicos
   const [categorias, setCategorias] = useState([]);
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState('todas');
@@ -132,10 +134,14 @@ export default function Categorias() {
             </button>
           ))}
         </div>
-        <button onClick={() => { setSelected(null); setModal('form'); }}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--accent)', color: '#fff', border: 'none', padding: '9px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-          <Plus size={14} /> Nueva categoría
-        </button>
+
+        {/* CONTROL: Oculta el botón de creación según privilegios del rol */}
+        {tienePermiso('ver-categorias') && (
+          <button onClick={() => { setSelected(null); setModal('form'); }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--accent)', color: '#fff', border: 'none', padding: '9px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            <Plus size={14} /> Nueva categoría
+          </button>
+        )}
       </div>
 
       {/* Tabla */}
@@ -176,12 +182,19 @@ export default function Categorias() {
                 </td>
                 <td style={{ padding: '12px 20px' }}>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button onClick={() => { setSelected(c); setModal('form'); }} title="Editar" style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid var(--border)', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Pencil size={13} color="var(--muted)" />
-                    </button>
-                    <button onClick={() => toggleEstado(c)} title={c.estado === 1 ? 'Desactivar' : 'Activar'} style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid var(--border)', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <PowerOff size={13} color={c.estado === 1 ? 'var(--danger)' : 'var(--success)'} />
-                    </button>
+                    {/* CONTROL: El botón de edición solo se dibuja para perfiles autorizados */}
+                    {tienePermiso('ver-categorias') && (
+                      <button onClick={() => { setSelected(c); setModal('form'); }} title="Editar" style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid var(--border)', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Pencil size={13} color="var(--muted)" />
+                      </button>
+                    )}
+
+                    {/* CONTROL: El botón de estado evalúa la regla de seguridad */}
+                    {tienePermiso('ver-categorias') && (
+                      <button onClick={() => toggleEstado(c)} title={c.estado === 1 ? 'Desactivar' : 'Activar'} style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid var(--border)', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <PowerOff size={13} color={c.estado === 1 ? 'var(--danger)' : 'var(--success)'} />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
