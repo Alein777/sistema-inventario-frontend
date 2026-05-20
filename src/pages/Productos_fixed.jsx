@@ -3,7 +3,6 @@ import api from '../api/axios';
 import toast from 'react-hot-toast';
 import { Plus, Search, Eye, Pencil, ArrowLeftRight, PowerOff, Package } from 'lucide-react';
 import ImageUploader from '../components/ImageUploader';
-import ActionButton from '../components/ActionButton';
 import '../styles/spinner.css';
 
 const estadoColor = { ok: '#059669', low: '#d97706', critical: '#dc2626' };
@@ -131,7 +130,7 @@ function ProductoForm({ inicial, categorias, proveedores, onSave, onClose }) {
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
         <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Imagen</label>
-        <ImageUploader onImageChange={setImagenFile} imagenActualUrl={inicial?.imagen} onImageRemove={() => setEliminarImagen(true)} />
+        <ImageUploader onFileSelect={setImagenFile} initialImage={inicial?.imagen} onRemove={() => setEliminarImagen(true)} />
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
@@ -242,35 +241,21 @@ export default function Productos() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalProductos, setTotalProductos] = useState(0);
-  const [productosPerPage, setProductosPerPage] = useState(10);
 
   const fetchAll = async (page = 1) => {
     setLoading(true);
     try {
-      const url = `/productos?page=${page}&per_page=${productosPerPage}`;
       const [p, c, pr] = await Promise.all([
-        api.get(url),
+        api.get(`/productos?page=${page}&per_page=10`),
         api.get('/categorias'),
         api.get('/proveedores'),
       ]);
-      const totalPages = p.data.last_page || 1;
-      const totalProductos = p.data.total || 0;
-      const currentPage = p.data.current_page || 1;
-      
-      // Verificar que la paginación funcione
-      console.log('Paginación Productos:', {
-        totalPages,
-        totalProductos,
-        currentPage,
-        productosLength: p.data.data?.length
-      });
-      
       setProductos(p.data.data || []);
       setCategorias(c.data.data || []);
       setProveedores(pr.data.data || []);
-      setTotalPages(totalPages);
-      setTotalProductos(totalProductos);
-      setCurrentPage(currentPage);
+      setTotalPages(p.data.last_page || 1);
+      setTotalProductos(p.data.total || 0);
+      setCurrentPage(p.data.current_page || 1);
     } catch (error) {
       toast.error('Error al cargar los datos');
       console.error('Error fetching data:', error);
@@ -285,7 +270,7 @@ export default function Productos() {
   useEffect(() => {
     setCurrentPage(1);
     fetchAll(1);
-  }, [search, catFilter, tab, productosPerPage]);
+  }, [search, catFilter, tab]);
 
   const filtered = productos.filter(p => {
     if (search && !p.nombre.toLowerCase().includes(search.toLowerCase())) return false;
@@ -296,8 +281,6 @@ export default function Productos() {
   });
 
   const handlePageChange = (page) => {
-    console.log('handlePageChange called with:', page); // Debug
-    console.log('Current page before change:', currentPage); // Debug
     setCurrentPage(page);
     fetchAll(page);
   };
@@ -372,7 +355,7 @@ export default function Productos() {
             </button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 14 }}>
             {filtered.map(p => {
               const est = p.estado === 0 ? 'inactive' : getEstado(p.stock, p.stock_minimo);
               const color = est === 'inactive' ? 'var(--muted)' : estadoColor[est];
@@ -403,19 +386,17 @@ export default function Productos() {
                     </div>
                     <div style={{ display: 'flex', gap: 5, borderTop: '1px solid #f1f5f9', paddingTop: 10 }}>
                       {[
-                        { icon: Eye,           title: 'Ver',      action: () => { setSelected(p); setModal('ver'); }, color: '#3b82f6' },
-                        { icon: ArrowLeftRight,title: 'Ajustar',  action: () => { setSelected(p); setModal('ajuste'); }, color: '#f59e0b' },
-                        { icon: Pencil,        title: 'Editar',   action: () => { setSelected(p); setModal('form'); }, color: '#10b981' },
-                        { icon: PowerOff,      title: p.estado === 1 ? 'Desactivar' : 'Activar', action: () => toggleEstado(p), danger: true, color: '#ef4444' },
-                      ].map(({ icon: Icon, title, action, danger, color }) => (
-                        <ActionButton
-                          key={title}
-                          icon={Icon}
-                          title={title}
-                          onClick={action}
-                          danger={danger}
-                          color={color}
-                        />
+                        { icon: Eye,           title: 'Ver',      action: () => { setSelected(p); setModal('ver'); } },
+                        { icon: ArrowLeftRight,title: 'Ajustar',  action: () => { setSelected(p); setModal('ajuste'); } },
+                        { icon: Pencil,        title: 'Editar',   action: () => { setSelected(p); setModal('form'); } },
+                        { icon: PowerOff,      title: p.estado === 1 ? 'Desactivar' : 'Activar', action: () => toggleEstado(p), danger: true },
+                      ].map(({ icon: Icon, title, action, danger }) => (
+                        <button key={title} onClick={action} title={title} style={{
+                          flex: 1, padding: 6, borderRadius: 6, border: '1px solid var(--border)',
+                          background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                          <Icon size={13} color={danger ? 'var(--danger)' : 'var(--muted)'} />
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -431,7 +412,7 @@ export default function Productos() {
         </div>
       )}
 
-      {!loading && (
+      {!loading && totalPages > 1 && (
         <div style={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
@@ -452,37 +433,8 @@ export default function Productos() {
               Página <strong>{currentPage}</strong> de <strong>{totalPages}</strong>
             </div>
             
-            <select 
-              value={productosPerPage} 
-              onChange={e => {
-                const newValue = Number(e.target.value);
-                console.log('Productos per page changed to:', newValue); // Debug
-                setProductosPerPage(newValue);
-              }}
-              style={{ 
-                padding: '8px 12px', 
-                border: '1px solid var(--border)', 
-                borderRadius: 6, 
-                fontSize: 13, 
-                outline: 'none', 
-                appearance: 'none', 
-                background: '#fff',
-                marginRight: 8
-              }}
-            >
-              <option value={10}>10 por página</option>
-              <option value={15}>15 por página</option>
-              <option value={25}>25 por página</option>
-            </select>
-            
             <button 
-              onClick={() => {
-                const prevPage = currentPage - 1;
-                console.log('Anterior clicked, current page:', currentPage, 'prev page:', prevPage);
-                if (prevPage >= 1) {
-                  handlePageChange(prevPage);
-                }
-              }}
+              onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
               style={{
                 padding: '8px 12px',
@@ -492,7 +444,7 @@ export default function Productos() {
                 borderRadius: 6,
                 fontSize: 13,
                 fontWeight: 500,
-                cursor: 'pointer'
+                cursor: currentPage === 1 ? 'not-allowed' : 'pointer'
               }}
             >
               Anterior
@@ -532,13 +484,7 @@ export default function Productos() {
             </div>
             
             <button 
-              onClick={() => {
-                const nextPage = currentPage + 1;
-                console.log('Siguiente clicked, current page:', currentPage, 'next page:', nextPage);
-                if (nextPage <= totalPages) {
-                  handlePageChange(nextPage);
-                }
-              }}
+              onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
               style={{
                 padding: '8px 12px',
@@ -548,7 +494,7 @@ export default function Productos() {
                 borderRadius: 6,
                 fontSize: 13,
                 fontWeight: 500,
-                cursor: 'pointer'
+                cursor: currentPage === totalPages ? 'not-allowed' : 'pointer'
               }}
             >
               Siguiente
