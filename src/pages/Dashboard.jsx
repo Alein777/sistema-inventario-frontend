@@ -53,7 +53,7 @@ export default function Dashboard() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
         <MetricCard icon={Package}        color="#2563eb" value={stats.productos}   label="Total productos"      trend="+activos" />
-        <MetricCard icon={Tag}            color="#059669" value={stats.categorias}  label="CategorĂ­as"           />
+        <MetricCard icon={Tag}            color="#059669" value={stats.categorias}  label="Categorias"           />
         <MetricCard icon={Truck}          color="#7c3aed" value={stats.proveedores} label="Proveedores"          />
         <MetricCard icon={ArrowLeftRight} color="#0891b2" value={stats.movimientos} label="Movimientos"          />
         <MetricCard icon={AlertTriangle}  color="#d97706" value={stats.stockBajo}   label="Productos stock bajo" />

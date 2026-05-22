@@ -49,7 +49,7 @@ function ProductoForm({ inicial, categorias, proveedores, onSave, onClose }) {
     setLoading(true);
     try {
       const payload = { ...form };
-      // Al editar no enviamos stock — solo se cambia via ajuste
+      
       if (esEdicion) delete payload.stock;
 
       if (esEdicion) {
