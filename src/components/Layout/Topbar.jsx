@@ -44,7 +44,7 @@ export default function Topbar() {
         <div style={{ fontSize: 12, color: 'var(--muted)' }}>{sub}</div>
       </div>
 
-      {/* Campana */}
+      {/*
       <div style={{ position: 'relative' }}>
         <button onClick={() => setOpen(o => !o)} style={{
           width: 36, height: 36, border: '1px solid var(--border)',
@@ -62,7 +62,6 @@ export default function Topbar() {
           )}
         </button>
 
-        {/* Dropdown */}
         {open && (
           <>
             <div onClick={() => setOpen(false)}
@@ -121,6 +120,7 @@ export default function Topbar() {
           </>
         )}
       </div>
+      */}
     </div>
   );
 }

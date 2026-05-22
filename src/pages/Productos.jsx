@@ -33,7 +33,6 @@ function ProductoForm({ inicial, categorias, proveedores, onSave, onClose }) {
     nombre:        inicial?.nombre || '',
     detalle:       inicial?.detalle || '',
     precio_compra: inicial?.precio_compra || '',
-    precio_venta:  inicial?.precio_venta || '',
     stock:         inicial?.stock || '',
     stock_minimo:  inicial?.stock_minimo || 5,
     id_categoria:  inicial?.id_categoria || '',
@@ -88,9 +87,9 @@ function ProductoForm({ inicial, categorias, proveedores, onSave, onClose }) {
           <textarea value={form.detalle} onChange={e => set('detalle', e.target.value)} placeholder="Descripción del producto..."
             style={{ padding: '9px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, outline: 'none', resize: 'none', height: 70 }} />
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
           {input('Precio compra ($)', 'precio_compra', 'number', '0.00')}
-          {input('Precio venta ($)', 'precio_venta', 'number', '0.00')}
+         
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           {/* Solo mostrar stock al crear, no al editar */}
@@ -295,7 +294,7 @@ export default function Productos() {
               <div style={{ padding: 12 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nombre}</div>
                 <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8 }}>{p.categoria?.nombre}</div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent)' }}>${Number(p.precio_venta).toFixed(2)}</div>
+
                 <div style={{ fontSize: 10, color: 'var(--muted)', marginBottom: 8 }}>Compra: <strong>${Number(p.precio_compra).toFixed(2)}</strong></div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--muted)', marginBottom: 10 }}>
                   <span>{p.stock} uds</span>
@@ -351,7 +350,7 @@ export default function Productos() {
               ['Nombre',        selected.nombre],
               ['Detalle',       selected.detalle],
               ['Precio compra', `$${Number(selected.precio_compra).toFixed(2)}`],
-              ['Precio venta',  `$${Number(selected.precio_venta).toFixed(2)}`],
+
               ['Stock',         selected.stock],
               ['Stock mínimo',  selected.stock_minimo],
               ['Categoría',     selected.categoria?.nombre],

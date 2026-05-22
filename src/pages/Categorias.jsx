@@ -198,7 +198,7 @@ export default function Categorias() {
       </div>
 
       {modal === 'form' && (
-        <Modal title={selected ? `Editar: ${selected.nombre}` : 'Nueva categoría'} onClose={() => setModal(null)}>
+        <Modal title={selected ? `Editar: ${selected.nombre}` : 'Agregar categoria'} onClose={() => setModal(null)}>
           <CategoriaForm inicial={selected} onSave={() => { setModal(null); fetchAll(); }} onClose={() => setModal(null)} />
         </Modal>
       )}
