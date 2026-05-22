@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 import { Plus, Search, Pencil, PowerOff, Tag, Layers, CheckCircle, XCircle } from 'lucide-react';
+import ActionButton from '../components/ActionButton';
 
 function Modal({ title, onClose, children }) {
   return (
@@ -63,17 +64,32 @@ function CategoriaForm({ inicial, onSave, onClose }) {
 
 export default function Categorias() {
   const [categorias, setCategorias] = useState([]);
-  const [search, setSearch] = useState('');
-  const [tab, setTab] = useState('todas');
   const [modal, setModal] = useState(null);
   const [selected, setSelected] = useState(null);
+  const [search, setSearch] = useState('');
+  const [tab, setTab] = useState('todos');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [categoriasPerPage] = useState(10);
 
-  const fetchAll = async () => {
-    const { data } = await api.get('/categorias');
-    setCategorias(data.data || []);
+  const fetchAll = async (page = 1) => {
+    try {
+      const { data } = await api.get(`/categorias?page=${page}&per_page=${categoriasPerPage}`);
+      setCategorias(data.data || []);
+      setTotalPages(data.last_page || 1);
+      setCurrentPage(data.current_page || 1);
+    } catch (err) {
+      console.error('Error fetching categorias:', err);
+      toast.error('Error al cargar categorías');
+    }
   };
 
-  useEffect(() => { fetchAll(); }, []);
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    fetchAll(page);
+  };
+
+  useEffect(() => { fetchAll(); }, [categoriasPerPage]);
 
   const filtered = categorias.filter(c => {
     if (search && !c.nombre.toLowerCase().includes(search.toLowerCase())) return false;
@@ -176,12 +192,18 @@ export default function Categorias() {
                 </td>
                 <td style={{ padding: '12px 20px' }}>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button onClick={() => { setSelected(c); setModal('form'); }} title="Editar" style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid var(--border)', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Pencil size={13} color="var(--muted)" />
-                    </button>
-                    <button onClick={() => toggleEstado(c)} title={c.estado === 1 ? 'Desactivar' : 'Activar'} style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid var(--border)', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <PowerOff size={13} color={c.estado === 1 ? 'var(--danger)' : 'var(--success)'} />
-                    </button>
+                    <ActionButton
+                        icon={Pencil}
+                        title="Editar"
+                        onClick={() => { setSelected(c); setModal('form'); }}
+                        color="#f59e0b"
+                      />
+                    <ActionButton
+                        icon={PowerOff}
+                        title={c.estado === 1 ? 'Desactivar' : 'Activar'}
+                        onClick={() => toggleEstado(c)}
+                        danger={c.estado === 1}
+                      />
                   </div>
                 </td>
               </tr>
@@ -196,6 +218,59 @@ export default function Categorias() {
           </tbody>
         </table>
       </div>
+
+      {/* Paginación */}
+      {totalPages > 1 && (
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          gap: 8, 
+          marginTop: 16, 
+          padding: '12px 20px',
+          background: '#fff',
+          borderRadius: 12,
+          border: '1px solid var(--border)'
+        }}>
+          <button 
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            style={{
+              padding: '8px 12px',
+              borderRadius: 6,
+              border: '1px solid var(--border)',
+              background: currentPage === 1 ? '#f8fafc' : '#fff',
+              color: currentPage === 1 ? 'var(--muted)' : 'var(--accent)',
+              cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+              fontSize: 13,
+              fontWeight: 500
+            }}
+          >
+            Anterior
+          </button>
+          
+          <span style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 500 }}>
+            Página {currentPage} de {totalPages}
+          </span>
+          
+          <button 
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            style={{
+              padding: '8px 12px',
+              borderRadius: 6,
+              border: '1px solid var(--border)',
+              background: currentPage === totalPages ? '#f8fafc' : '#fff',
+              color: currentPage === totalPages ? 'var(--muted)' : 'var(--accent)',
+              cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+              fontSize: 13,
+              fontWeight: 500
+            }}
+          >
+            Siguiente
+          </button>
+        </div>
+      )}
 
       {modal === 'form' && (
         <Modal title={selected ? `Editar: ${selected.nombre}` : 'Nueva categoría'} onClose={() => setModal(null)}>
