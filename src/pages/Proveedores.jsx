@@ -6,6 +6,7 @@ import {
   Building2, Phone, Mail,
   CheckCircle, XCircle, Layers
 } from 'lucide-react';
+import ActionButton from '../components/ActionButton';
 
 function Modal({ title, onClose, children }) {
   return (
@@ -178,16 +179,21 @@ function ProveedorForm({ inicial, onSave, onClose }) {
 
 export default function Proveedores() {
   const [proveedores, setProveedores] = useState([]);
-  const [search, setSearch]           = useState('');
-  const [tab, setTab]                 = useState('todos');
-  const [modal, setModal]             = useState(null);
-  const [selected, setSelected]       = useState(null);
-  const [loading, setLoading]         = useState(true);
+  const [modal, setModal] = useState(null);
+  const [selected, setSelected] = useState(null);
+  const [search, setSearch] = useState('');
+  const [tab, setTab] = useState('todos');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [proveedoresPerPage] = useState(10);
+  const [loading, setLoading] = useState(true);
 
-  const fetchAll = async () => {
+  const fetchAll = async (page = 1) => {
     try {
-      const { data } = await api.get('/proveedores');
+      const { data } = await api.get(`/proveedores?page=${page}&per_page=${proveedoresPerPage}`);
       setProveedores(data.data || data);
+      setTotalPages(data.last_page || 1);
+      setCurrentPage(data.current_page || 1);
     } catch {
       toast.error('Error al cargar proveedores');
     } finally {
@@ -195,7 +201,12 @@ export default function Proveedores() {
     }
   };
 
-  useEffect(() => { fetchAll(); }, []);
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    fetchAll(page);
+  };
+
+  useEffect(() => { fetchAll(); }, [proveedoresPerPage]);
 
   const filtrados = proveedores.filter(p => {
     const matchTab =
@@ -351,14 +362,18 @@ export default function Proveedores() {
                     </td>
                     <td style={{ padding: '12px 20px' }}>
                       <div style={{ display: 'flex', gap: 6 }}>
-                        <button onClick={() => { setSelected(p); setModal('form'); }} title="Editar"
-                          style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid var(--border)', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Pencil size={13} color="var(--muted)" />
-                        </button>
-                        <button onClick={() => toggleEstado(p)} title={p.estado === 1 ? 'Desactivar' : 'Activar'}
-                          style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid var(--border)', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <PowerOff size={13} color={p.estado === 1 ? 'var(--danger)' : 'var(--success)'} />
-                        </button>
+                        <ActionButton
+                        icon={Pencil}
+                        title="Editar"
+                        onClick={() => { setSelected(p); setModal('form'); }}
+                        color="#f59e0b"
+                      />
+                    <ActionButton
+                        icon={PowerOff}
+                        title={p.estado === 1 ? 'Desactivar' : 'Activar'}
+                        onClick={() => toggleEstado(p)}
+                        danger={p.estado === 1}
+                      />
                       </div>
                     </td>
                   </tr>
@@ -376,12 +391,64 @@ export default function Proveedores() {
         )}
       </div>
 
+      {/* Paginación */}
+      {totalPages > 1 && (
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          gap: 8, 
+          marginTop: 16, 
+          padding: '12px 20px',
+          background: '#fff',
+          borderRadius: 12,
+          border: '1px solid var(--border)'
+        }}>
+          <button 
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            style={{
+              padding: '8px 12px',
+              borderRadius: 6,
+              border: '1px solid var(--border)',
+              background: currentPage === 1 ? '#f8fafc' : '#fff',
+              color: currentPage === 1 ? 'var(--muted)' : 'var(--accent)',
+              cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+              fontSize: 13,
+              fontWeight: 500
+            }}
+          >
+            Anterior
+          </button>
+          
+          <span style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 500 }}>
+            Página {currentPage} de {totalPages}
+          </span>
+          
+          <button 
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            style={{
+              padding: '8px 12px',
+              borderRadius: 6,
+              border: '1px solid var(--border)',
+              background: currentPage === totalPages ? '#f8fafc' : '#fff',
+              color: currentPage === totalPages ? 'var(--muted)' : 'var(--accent)',
+              cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+              fontSize: 13,
+              fontWeight: 500
+            }}
+          >
+            Siguiente
+          </button>
+        </div>
+      )}
+
       {modal === 'form' && (
         <Modal title={selected ? `Editar: ${selected.nombre}` : 'Nuevo proveedor'} onClose={() => setModal(null)}>
           <ProveedorForm inicial={selected} onSave={onSave} onClose={() => setModal(null)} />
         </Modal>
       )}
-
     </div>
   );
 }

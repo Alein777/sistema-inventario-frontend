@@ -95,7 +95,8 @@ export default function Login() {
             lineHeight: 1.1, margin: '0 0 16px',
             textShadow: '0 2px 20px rgba(0,0,0,0.3)',
           }}>
-            Welcome<br />Back!
+            Bienvenido!
+           
           </h1>
           <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.5)', margin: 0, maxWidth: 280 }}>
             Gestiona tu inventario de forma fácil y eficiente.

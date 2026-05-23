@@ -1,14 +1,19 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
-import { Plus, Search, Pencil, PowerOff, Users, UserCheck, UserX } from 'lucide-react';
+
+import { Plus, Search, Eye, Pencil, Trash2, UserCheck, UserX, User, Mail, PowerOff } from 'lucide-react';
+import ActionButton from '../components/ActionButton';
+
 
 function Modal({ title, onClose, children }) {
   return (
     <div onClick={e => e.target === e.currentTarget && onClose()}
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-      <div style={{ background: '#fff', borderRadius: 14, width: 420, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
-        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+
+      <div style={{ background: '#fff', borderRadius: 14, width: 480, maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, background: '#fff', zIndex: 1 }}>
+
           <span style={{ fontSize: 15, fontWeight: 700 }}>{title}</span>
           <button onClick={onClose} style={{ width: 30, height: 30, border: 'none', background: '#f4f6f9', borderRadius: 6, cursor: 'pointer', fontSize: 16, color: 'var(--muted)' }}>✕</button>
         </div>
@@ -18,14 +23,15 @@ function Modal({ title, onClose, children }) {
   );
 }
 
-function UsuarioForm({ inicial, onSave, onClose }) {
+
+function UsuarioForm({ inicial, roles, onSave, onClose }) {
   const esEdicion = !!inicial?.id;
   const [form, setForm] = useState({
-    name:     inicial?.name     || '',
-    email:    inicial?.email    || '',
+    name: inicial?.name || '',
+    email: inicial?.email || '',
     password: '',
-    rol:      inicial?.roles?.[0] || 'Empleado',
-    estado:   inicial?.estado   ?? 1,
+    rol: inicial?.roles?.[0]?.name || '',
+    estado: inicial?.estado ?? 1,
   });
   const [loading, setLoading] = useState(false);
 
@@ -67,31 +73,31 @@ function UsuarioForm({ inicial, onSave, onClose }) {
   return (
     <form onSubmit={handleSubmit}>
       <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-        {input('Nombre completo', 'name', 'text', 'Ej. María González')}
-        {input('Correo electrónico', 'email', 'email', 'correo@ejemplo.com')}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-          <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-            {esEdicion ? 'Nueva contraseña (dejar vacío para no cambiar)' : 'Contraseña'}
-          </label>
-          <input type="password" value={form.password} onChange={e => set('password', e.target.value)}
-            placeholder={esEdicion ? 'Dejar vacío para no cambiar' : 'Mínimo 6 caracteres'}
-            style={{ padding: '9px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, outline: 'none' }} />
-        </div>
+
+        {input('Nombre completo', 'name', 'text', 'Ej. Juan Pérez')}
+        {input('Correo electrónico', 'email', 'email', 'ejemplo@correo.com')}
+        {input('Contraseña', 'password', 'password', esEdicion ? 'Dejar en blanco para mantener' : 'Mínimo 6 caracteres')}
+        
         <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
           <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Rol</label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            {['Administrador', 'Empleado'].map(r => (
-              <button key={r} type="button" onClick={() => set('rol', r)} style={{
-                padding: '10px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600,
-                border: `1.5px solid ${form.rol === r ? 'var(--accent)' : 'var(--border)'}`,
-                background: form.rol === r ? '#eff6ff' : 'none',
-                color: form.rol === r ? 'var(--accent)' : 'var(--muted)'
-              }}>{r}</button>
-            ))}
-          </div>
+          <select value={form.rol} onChange={e => set('rol', e.target.value)}
+            style={{ padding: '9px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, outline: 'none' }}>
+            <option value="">Seleccionar rol</option>
+            {roles.map(r => <option key={r.name} value={r.name}>{r.name}</option>)}
+          </select>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+          <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Estado</label>
+          <select value={form.estado} onChange={e => set('estado', Number(e.target.value))}
+            style={{ padding: '9px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, outline: 'none' }}>
+            <option value={1}>Activo</option>
+            <option value={0}>Inactivo</option>
+          </select>
         </div>
       </div>
-      <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+      <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, justifyContent: 'flex-end', position: 'sticky', bottom: 0, background: '#fff' }}>
+
         <button type="button" onClick={onClose} style={{ padding: '8px 16px', border: '1px solid var(--border)', background: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: 'var(--muted)' }}>Cancelar</button>
         <button type="submit" disabled={loading} style={{ padding: '8px 16px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
           {loading ? 'Guardando...' : 'Guardar'}
@@ -103,161 +109,241 @@ function UsuarioForm({ inicial, onSave, onClose }) {
 
 export default function Usuarios() {
   const [usuarios, setUsuarios] = useState([]);
-  const [search, setSearch]     = useState('');
-  const [tab, setTab]           = useState('todos');
-  const [modal, setModal]       = useState(null);
-  const [selected, setSelected] = useState(null);
 
-  const fetchAll = async () => {
-    const { data } = await api.get('/usuarios');
-    setUsuarios(data.data || []);
+  const [roles, setRoles] = useState([]);
+  const [modal, setModal] = useState(null);
+  const [selected, setSelected] = useState(null);
+  const [search, setSearch] = useState('');
+  const [tab, setTab] = useState('todos');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [usuariosPerPage] = useState(10);
+
+  const fetchAll = async (page = 1) => {
+    try {
+      const [u, r] = await Promise.all([
+        api.get(`/usuarios?page=${page}&per_page=${usuariosPerPage}`),
+        api.get('/roles'),
+      ]);
+      setUsuarios(u.data.data || []);
+      setRoles(r.data || []);
+      setTotalPages(u.data.last_page || 1);
+      setCurrentPage(u.data.current_page || 1);
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      toast.error('Error al cargar datos');
+    }
   };
 
-  useEffect(() => { fetchAll(); }, []);
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    fetchAll(page);
+  };
+
+  useEffect(() => { fetchAll(); }, [usuariosPerPage]);
 
   const filtered = usuarios.filter(u => {
-    if (search && !u.name.toLowerCase().includes(search.toLowerCase()) &&
-        !u.email.toLowerCase().includes(search.toLowerCase())) return false;
-    if (tab === 'activos')   return u.estado === 1;
-    if (tab === 'inactivos') return u.estado === 0;
+    if (search && !u.name.toLowerCase().includes(search.toLowerCase()) && !u.email.toLowerCase().includes(search.toLowerCase())) return false;
+
     return true;
   });
 
   const toggleEstado = async (u) => {
-    await api.put(`/usuarios/${u.id}`, { estado: u.estado === 1 ? 0 : 1 });
-    toast.success(u.estado === 1 ? 'Usuario desactivado' : 'Usuario activado');
-    fetchAll();
+
+    try {
+      await api.put(`/usuarios/${u.id}`, { estado: u.estado === 1 ? 0 : 1 });
+      toast.success(u.estado === 1 ? 'Usuario desactivado' : 'Usuario activado');
+      fetchAll();
+    } catch (err) {
+      toast.error('Error al cambiar estado');
+    }
   };
 
-  const btnStyle = (active) => ({
-    padding: '6px 12px', borderRadius: 6, fontSize: 12, fontWeight: 600,
-    cursor: 'pointer', border: 'none', fontFamily: 'inherit',
-    background: active ? '#fff' : 'none',
-    color: active ? 'var(--text)' : 'var(--muted)',
-    boxShadow: active ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-  });
-
-  const initials = (name) => name?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
-
-  const rolColor = (rol) => rol === 'Administrador'
-    ? { bg: '#eff6ff', color: '#2563eb' }
-    : { bg: '#f0fdf4', color: '#059669' };
+  const getRoleColor = (role) => {
+    const colors = {
+      'admin': '#dc2626',
+      'gerente': '#7c3aed',
+      'empleado': '#2563eb',
+    };
+    return colors[role] || '#6b7280';
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-      {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-        {[
-          { label: 'Total usuarios', value: usuarios.length,                             color: '#2563eb', icon: Users      },
-          { label: 'Activos',        value: usuarios.filter(u => u.estado === 1).length, color: '#059669', icon: UserCheck  },
-          { label: 'Inactivos',      value: usuarios.filter(u => u.estado === 0).length, color: '#dc2626', icon: UserX      },
-        ].map(({ label, value, color, icon: Icon }) => (
-          <div key={label} style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 8, background: color + '15', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Icon size={16} color={color} />
-            </div>
-            <div>
-              <div style={{ fontSize: 20, fontWeight: 700 }}>{value}</div>
-              <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>{label}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Filtros */}
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
         <div style={{ position: 'relative', flex: 1, minWidth: 180 }}>
           <Search size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nombre o email..."
-            style={{ width: '100%', padding: '9px 12px 9px 34px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, outline: 'none', background: '#fff' }} />
-        </div>
-        <div style={{ display: 'flex', gap: 4, background: '#f1f5f9', padding: 3, borderRadius: 8 }}>
-          {['todos', 'activos', 'inactivos'].map(t => (
-            <button key={t} onClick={() => setTab(t)} style={btnStyle(tab === t)}>
-              {t.charAt(0).toUpperCase() + t.slice(1)}
-            </button>
-          ))}
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar usuario..."
+            style={{ width: '100%', padding: '9px 12px 9px 34px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, outline: 'none' }} />
         </div>
         <button onClick={() => { setSelected(null); setModal('form'); }}
           style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--accent)', color: '#fff', border: 'none', padding: '9px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-          <Plus size={14} /> Nuevo usuario
+          <Plus size={14} /> Agregar usuario
         </button>
       </div>
 
-      {/* Tabla */}
       <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
-        <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: 14, fontWeight: 700 }}>Lista de usuarios</span>
-          <span style={{ fontSize: 12, color: 'var(--muted)', background: '#f4f6f9', padding: '4px 10px', borderRadius: 20 }}>{filtered.length} usuarios</span>
-        </div>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              {['Usuario', 'Email', 'Rol', 'Estado', 'Acciones'].map(h => (
-                <th key={h} style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.8, padding: '10px 20px', textAlign: 'left', background: '#f8fafc', borderBottom: '1px solid var(--border)' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map(u => {
-              const rc = rolColor(u.roles?.[0]);
-              return (
-                <tr key={u.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '12px 20px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 34, height: 34, borderRadius: 8, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'var(--accent)', flexShrink: 0 }}>
-                        {initials(u.name)}
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#f8fafc', borderBottom: '1px solid var(--border)' }}>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Usuario</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Rol</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Estado</th>
+                <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: 12, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(u => (
+                <tr key={u.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.2s' }}>
+                  <td style={{ padding: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 10, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <User size={18} color="#64748b" />
                       </div>
-                      <span style={{ fontSize: 13, fontWeight: 600 }}>{u.name}</span>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{u.name}</div>
+                        <div style={{ fontSize: 12, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Mail size={12} /> {u.email}
+                        </div>
+                      </div>
                     </div>
                   </td>
-                  <td style={{ padding: '12px 20px', fontSize: 13, color: 'var(--muted)' }}>{u.email}</td>
-                  <td style={{ padding: '12px 20px' }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: rc.bg, color: rc.color }}>
-                      {u.roles?.[0] || 'Sin rol'}
+                  <td style={{ padding: '16px' }}>
+                    <span style={{ 
+                      fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20, 
+                      background: getRoleColor(u.roles?.[0]?.name) + '20', 
+                      color: getRoleColor(u.roles?.[0]?.name) 
+                    }}>
+                      {u.roles?.[0]?.name || 'Sin rol'}
                     </span>
                   </td>
-                  <td style={{ padding: '12px 20px' }}>
-                    <span style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 5,
-                      fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20,
-                      background: u.estado === 1 ? '#f0fdf4' : '#f1f5f9',
-                      color: u.estado === 1 ? 'var(--success)' : 'var(--muted)'
+                  <td style={{ padding: '16px' }}>
+                    <span style={{ 
+                      fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20, 
+                      background: u.estado === 1 ? '#dcfce7' : '#fee2e2', 
+                      color: u.estado === 1 ? '#166534' : '#dc2626' 
                     }}>
-                      <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor' }} />
                       {u.estado === 1 ? 'Activo' : 'Inactivo'}
                     </span>
                   </td>
-                  <td style={{ padding: '12px 20px' }}>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button onClick={() => { setSelected(u); setModal('form'); }} title="Editar"
-                        style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid var(--border)', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Pencil size={13} color="var(--muted)" />
-                      </button>
-                      <button onClick={() => toggleEstado(u)} title={u.estado === 1 ? 'Desactivar' : 'Activar'}
-                        style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid var(--border)', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <PowerOff size={13} color={u.estado === 1 ? 'var(--danger)' : 'var(--success)'} />
-                      </button>
+                  <td style={{ padding: '16px' }}>
+                    <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+                      <ActionButton
+                          icon={Eye}
+                          title="Ver detalles"
+                          onClick={() => { setSelected(u); setModal('ver'); }}
+                          color="#64748b"
+                        />
+                        <ActionButton
+                          icon={Pencil}
+                          title="Editar"
+                          onClick={() => { setSelected(u); setModal('form'); }}
+                          color="#10b981"
+                        />
+                        <ActionButton
+                          icon={PowerOff}
+                          title={u.estado === 1 ? 'Desactivar' : 'Activar'}
+                          onClick={() => toggleEstado(u)}
+                          danger={u.estado === 1}
+                        />
                     </div>
                   </td>
                 </tr>
-              );
-            })}
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan={5} style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-                  No se encontraron usuarios
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {filtered.length === 0 && (
+          <div style={{ textAlign: 'center', padding: 40, color: 'var(--muted)', fontSize: 13 }}>
+            No se encontraron usuarios
+          </div>
+        )}
       </div>
 
+      {/* Paginación */}
+      {totalPages > 1 && (
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          gap: 8, 
+          marginTop: 16, 
+          padding: '12px 20px',
+          background: '#fff',
+          borderRadius: 12,
+          border: '1px solid var(--border)'
+        }}>
+          <button 
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            style={{
+              padding: '8px 12px',
+              borderRadius: 6,
+              border: '1px solid var(--border)',
+              background: currentPage === 1 ? '#f8fafc' : '#fff',
+              color: currentPage === 1 ? 'var(--muted)' : 'var(--accent)',
+              cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+              fontSize: 13,
+              fontWeight: 500
+            }}
+          >
+            Anterior
+          </button>
+          
+          <span style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 500 }}>
+            Página {currentPage} de {totalPages}
+          </span>
+          
+          <button 
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            style={{
+              padding: '8px 12px',
+              borderRadius: 6,
+              border: '1px solid var(--border)',
+              background: currentPage === totalPages ? '#f8fafc' : '#fff',
+              color: currentPage === totalPages ? 'var(--muted)' : 'var(--accent)',
+              cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+              fontSize: 13,
+              fontWeight: 500
+            }}
+          >
+            Siguiente
+          </button>
+        </div>
+      )}
+
       {modal === 'form' && (
-        <Modal title={selected ? `Editar: ${selected.name}` : 'Nuevo usuario'} onClose={() => setModal(null)}>
-          <UsuarioForm inicial={selected} onSave={() => { setModal(null); fetchAll(); }} onClose={() => setModal(null)} />
+        <Modal title={selected ? `Editar: ${selected.name}` : 'Agregar usuario'} onClose={() => setModal(null)}>
+          <UsuarioForm inicial={selected} roles={roles}
+            onSave={() => { setModal(null); fetchAll(); }} onClose={() => setModal(null)} />
+        </Modal>
+      )}
+
+      {modal === 'ver' && selected && (
+        <Modal title="Detalles del usuario" onClose={() => setModal(null)}>
+          <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 8 }}>
+              <div style={{ width: 60, height: 60, borderRadius: 12, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Users size={28} color="#64748b" />
+              </div>
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 700 }}>{selected.name}</div>
+                <div style={{ fontSize: 13, color: 'var(--muted)' }}>{selected.email}</div>
+              </div>
+            </div>
+            {[
+              ['Rol', selected.roles?.[0]?.name || 'Sin rol'],
+              ['Estado', selected.estado === 1 ? 'Activo' : 'Inactivo'],
+              ['Creado el', new Date(selected.created_at).toLocaleDateString('es-ES')],
+            ].map(([k, v]) => (
+              <div key={k} style={{ display: 'flex', gap: 12, padding: '8px 0', borderBottom: '1px solid #f1f5f9' }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', minWidth: 100 }}>{k}</span>
+                <span style={{ fontSize: 13 }}>{v}</span>
+              </div>
+            ))}
+          </div>
         </Modal>
       )}
     </div>
